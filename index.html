@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EDUTAKE - Professional Learning Platform</title>
+    <!-- Tailwind CSS 3 Play CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Supabase JS -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --bg: #F8F9FA;
+            --text: #202124;
+            --card-bg: #FFFFFF;
+            --card-border: #E0E0E0;
+            --muted: #5F6368;
+            --primary: #1A73E8;
+            --success: #34A853;
+            --error: #EA4335;
+        }
+
+        .dark {
+            --bg: #0F172A;
+            --text: #F8FAFC;
+            --card-bg: #1E293B;
+            --card-border: #334155;
+            --muted: #94A3B8;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s, color 0.3s;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+            padding: 0.875rem 1.75rem;
+            border-radius: 14px;
+            font-weight: 700;
+            transition: all 0.3s;
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary:hover {
+            filter: brightness(1.1);
+            box-shadow: 0 4px 12px rgba(26, 115, 232, 0.3);
+            transform: translateY(-1px);
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .animate-shake {
+            animation: shake 0.3s ease-in-out;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .loader {
+            border: 3px solid var(--card-border);
+            border-top: 3px solid var(--primary);
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .dark .glass {
+            background: rgba(15, 23, 42, 0.7);
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        bg: 'var(--bg)',
+                        text: 'var(--text)',
+                        cardBg: 'var(--card-bg)',
+                        cardBorder: 'var(--card-border)',
+                        muted: 'var(--muted)',
+                        primary: 'var(--primary)',
+                        success: 'var(--success)',
+                        error: 'var(--error)',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="dark:bg-slate-900">
+    <!-- Intro Overlay -->
+    <div id="intro-overlay" class="fixed inset-0 z-[100] bg-white dark:bg-slate-900 flex flex-col items-center justify-center transition-opacity duration-700">
+        <div class="w-24 h-24 bg-blue-600 rounded-[2rem] flex items-center justify-center shadow-2xl shadow-blue-600/40 mb-12 animate-bounce">
+            <i data-lucide="graduation-cap" class="text-white w-12 h-12"></i>
+        </div>
+        <h1 class="text-6xl md:text-8xl font-black tracking-tighter text-blue-600">EDUTAKE</h1>
+        <button id="start-btn" class="mt-12 px-10 py-4 bg-blue-600 text-white rounded-full font-bold text-sm shadow-lg shadow-blue-600/20 hover:scale-105 transition-all">
+            Start Learning
+        </button>
+    </div>
+
+    <!-- Main App Container -->
+    <div id="app" class="hidden min-h-screen pb-20">
+        <header class="p-6 flex items-center justify-between max-w-7xl mx-auto border-b border-card-border sticky top-0 bg-bg/80 backdrop-blur-md z-50">
+            <div id="logo" class="flex items-center gap-3 cursor-pointer group">
+                <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20 group-hover:scale-110 transition-transform">
+                    <i data-lucide="graduation-cap" class="text-white w-6 h-6"></i>
+                </div>
+                <h1 class="text-2xl font-black tracking-tighter text-primary">EDUTAKE</h1>
+            </div>
+            <button id="theme-toggle" class="w-10 h-10 bg-card-bg border border-card-border rounded-xl text-muted hover:text-primary hover:border-primary transition-all flex items-center justify-center">
+                <i data-lucide="moon" id="theme-icon" class="w-5 h-5"></i>
+            </button>
+        </header>
+
+        <main id="view-container" class="max-w-7xl mx-auto px-6 py-12">
+            <!-- Views will be injected here -->
+        </main>
+
+        <footer class="max-w-7xl mx-auto px-6 py-12 border-t border-card-border mt-20 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div class="flex items-center gap-2 text-muted font-bold text-[10px] uppercase tracking-[0.3em]">
+                <i data-lucide="graduation-cap" class="w-3 h-3"></i> © 2026 EDUTAKE PLATFORM
+            </div>
+            <div class="flex items-center gap-8">
+                <a href="#" class="text-muted hover:text-primary font-bold text-[10px] uppercase tracking-widest transition-colors">Privacy</a>
+                <a href="#" class="text-muted hover:text-primary font-bold text-[10px] uppercase tracking-widest transition-colors">Terms</a>
+                <a href="#" class="text-muted hover:text-primary font-bold text-[10px] uppercase tracking-widest transition-colors">Support</a>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // --- CONFIGURATION ---
+        // Replace these with your actual Supabase credentials
+        const SUPABASE_URL = "https://yyelaokagitsjlshiuwa.supabase.co";
+        const SUPABASE_ANON_KEY = "sb_publishable_QhBXAjQJ3PO0MQ73coH2Iw_w41K_z3z";
+
+        let supabaseClient = null;
+        try {
+            if (window.supabase && SUPABASE_URL !== "https://your-project-url.supabase.co") {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            }
+        } catch (e) {
+            console.error("Supabase initialization failed. Please check your credentials.");
+        }
+
+        // --- STATE MANAGEMENT ---
+        const state = {
+            view: 'home',
+            dept: null,
+            semester: null,
+            subject: null,
+            mode: null,
+            mcqIndex: 0,
+            examAnswers: {},
+            examStarted: false,
+            examTimeLeft: 0,
+            isDarkMode: localStorage.getItem('edutake_theme') === 'dark'
+        };
+
+        // --- DATA STORE ---
+        // Used to store objects to avoid quote issues in onclick
+        window.dataStore = {
+            depts: {},
+            subjects: {}
+        };
+
+        // --- UTILS ---
+        function renderIcon() {
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        function setView(viewName, params = {}) {
+            state.view = viewName;
+            Object.assign(state, params);
+            render();
+            window.scrollTo(0, 0);
+        }
+
+        // --- VIEWS ---
+
+        const views = {
+            home: () => `
+                <div class="flex flex-col items-center justify-center text-center min-h-[70vh] space-y-12 px-4 fade-in">
+                    <div class="space-y-6 max-w-4xl">
+                        <div class="flex items-center justify-center gap-2 text-primary font-bold text-xs uppercase tracking-[0.4em]">
+                            <div class="w-12 h-[2px] bg-primary"></div>
+                            Professional Learning Platform
+                            <div class="w-12 h-[2px] bg-primary"></div>
+                        </div>
+                        <h2 class="text-7xl md:text-9xl font-black tracking-tighter leading-[0.85] text-text">
+                            MASTER YOUR <br />
+                            <span class="text-primary">FUTURE.</span>
+                        </h2>
+                        <p class="text-muted text-lg md:text-xl max-w-2xl mx-auto leading-relaxed font-medium">
+                            A high-performance educational ecosystem designed for engineering excellence. Access curated materials with precision.
+                        </p>
+                    </div>
+                    <button onclick="setView('select-dept')" class="px-14 py-7 bg-primary text-white font-bold text-sm uppercase tracking-[0.2em] rounded-full hover:shadow-2xl hover:shadow-primary/30 transition-all flex items-center gap-4">
+                        Get Started <i data-lucide="arrow-up-right" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            `,
+
+            'select-dept': async () => {
+                const container = document.getElementById('view-container');
+                container.innerHTML = `
+                    <div class="max-w-5xl mx-auto space-y-12 fade-in">
+                        <div class="flex items-center justify-between">
+                            <button onclick="setView('home')" class="flex items-center gap-2 text-muted hover:text-primary transition-all font-bold text-xs uppercase tracking-widest">
+                                <i data-lucide="arrow-left" class="w-4 h-4"></i> Back
+                            </button>
+                            <div class="text-right">
+                                <h2 class="text-5xl font-black tracking-tighter">SELECT <span class="text-primary">DEPT.</span></h2>
+                                <p class="text-muted text-xs uppercase tracking-[0.2em] font-bold">Step 01 / 02</p>
+                            </div>
+                        </div>
+                        <div id="dept-grid" class="grid md:grid-cols-2 gap-6">
+                            <div class="h-32 w-full bg-slate-200 dark:bg-slate-800 animate-pulse rounded-2xl"></div>
+                            <div class="h-32 w-full bg-slate-200 dark:bg-slate-800 animate-pulse rounded-2xl"></div>
+                        </div>
+                    </div>
+                `;
+                renderIcon();
+
+                let depts = [];
+                if (supabaseClient) {
+                    try {
+                        const { data, error } = await supabaseClient.from('departments').select('*');
+                        if (!error) depts = data || [];
+                    } catch (e) {
+                        console.error("Error fetching departments:", e);
+                    }
+                } else {
+                    document.getElementById('dept-grid').innerHTML = `
+                        <div class="col-span-full p-12 card text-center space-y-4">
+                            <p class="text-error font-bold text-xl">Supabase Not Configured</p>
+                            <p class="text-muted">Please edit the <code>index.html</code> file and add your <code>SUPABASE_URL</code> and <code>SUPABASE_ANON_KEY</code>.</p>
+                            <p class="text-xs text-muted">You can find these in your Supabase Dashboard under Project Settings > API.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const grid = document.getElementById('dept-grid');
+                if (depts.length === 0) {
+                    grid.innerHTML = `<p class="col-span-full text-center text-muted py-10">No departments found in your database.</p>`;
+                } else {
+                    grid.innerHTML = depts.map(dept => {
+                        window.dataStore.depts[dept.id] = dept;
+                        return `
+                            <button onclick="setView('select-semester', { dept: window.dataStore.depts['${dept.id}'] })" class="card p-10 text-left group hover:border-primary transition-all flex items-center justify-between">
+                                <div class="space-y-2">
+                                    <h3 class="text-3xl font-black tracking-tight group-hover:text-primary transition-colors">${dept.name}</h3>
+                                    <p class="text-muted text-xs uppercase tracking-widest font-bold opacity-60">Engineering Faculty</p>
+                                </div>
+                                <div class="w-12 h-12 rounded-full bg-bg flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all">
+                                    <i data-lucide="chevron-right" class="w-6 h-6"></i>
+                                </div>
+                            </button>
+                        `;
+                    }).join('');
+                }
+                renderIcon();
+            },
+
+            'select-semester': () => `
+                <div class="max-w-5xl mx-auto space-y-12 fade-in">
+                    <div class="flex items-center justify-between">
+                        <button onclick="setView('select-dept')" class="flex items-center gap-2 text-muted hover:text-primary transition-all font-bold text-xs uppercase tracking-widest">
+                            <i data-lucide="arrow-left" class="w-4 h-4"></i> Back
+                        </button>
+                        <div class="text-right">
+                            <h2 class="text-5xl font-black tracking-tighter">SELECT <span class="text-primary">SEMESTER.</span></h2>
+                            <p class="text-muted text-xs uppercase tracking-[0.2em] font-bold">Step 02 / 02</p>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                        ${['1', '2', '3', '4', '5', '6', '7', '8'].map(sem => `
+                            <button onclick="setView('subjects', { semester: '${sem}' })" class="card p-12 flex flex-col items-center justify-center gap-4 group hover:border-primary transition-all">
+                                <span class="text-6xl font-black text-muted group-hover:text-primary transition-colors">${sem}</span>
+                                <span class="text-[10px] font-bold uppercase tracking-[0.3em] text-muted opacity-50">Semester</span>
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
+            `,
+
+            'subjects': async () => {
+                const container = document.getElementById('view-container');
+                container.innerHTML = `
+                    <div class="space-y-12 fade-in">
+                        <div class="flex items-center justify-between">
+                            <button onclick="setView('select-semester')" class="flex items-center gap-2 text-muted hover:text-primary transition-all font-bold text-xs uppercase tracking-widest">
+                                <i data-lucide="arrow-left" class="w-4 h-4"></i> Back
+                            </button>
+                            <div class="text-right">
+                                <h2 class="text-5xl font-black tracking-tighter">${state.dept.name}</h2>
+                                <p class="text-muted text-xs uppercase tracking-[0.2em] font-bold">Semester ${state.semester} Curriculum</p>
+                            </div>
+                        </div>
+                        <div id="subject-grid" class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                            <div class="h-64 w-full bg-slate-200 dark:bg-slate-800 animate-pulse rounded-2xl"></div>
+                            <div class="h-64 w-full bg-slate-200 dark:bg-slate-800 animate-pulse rounded-2xl"></div>
+                        </div>
+                    </div>
+                `;
+                renderIcon();
+
+                let subjects = [];
+                if (supabaseClient) {
+                    try {
+                        const { data, error } = await supabaseClient
+                            .from('subjects')
+                            .select('*, mcqs(*), short_questions(*)')
+                            .eq('department_id', state.dept.id)
+                            .eq('semester', parseInt(state.semester));
+                        
+                        if (!error) {
+                            subjects = (data || []).map(s => ({
+                                ...s,
+                                mcqs: s.mcqs.map(m => ({ id: m.id, question: m.question, options: m.options, correctAnswer: m.correct_answer })),
+                                shortQuestions: s.short_questions.map(sq => ({ id: sq.id, question: sq.question, answer: sq.answer }))
+                            }));
+                        }
+                    } catch (e) {
+                        console.error("Error fetching subjects:", e);
+                    }
+                }
+
+                const grid = document.getElementById('subject-grid');
+                if (subjects.length === 0) {
+                    grid.innerHTML = `<div class="col-span-full py-20 text-center space-y-4"><i data-lucide="layers" class="mx-auto text-muted opacity-20 w-12 h-12"></i><p class="text-muted font-bold uppercase tracking-widest">No subjects found for this semester.</p></div>`;
+                } else {
+                    grid.innerHTML = subjects.map(subject => {
+                        window.dataStore.subjects[subject.id] = subject;
+                        return `
+                            <div onclick="setView('mode-selection', { subject: window.dataStore.subjects['${subject.id}'] })" class="card p-12 hover:border-primary transition-all cursor-pointer group flex flex-col justify-between min-h-[280px]">
+                                <div class="space-y-8">
+                                    <div class="w-16 h-16 bg-bg rounded-2xl border border-card-border flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all shadow-sm">
+                                        <i data-lucide="book-open" class="w-7 h-7"></i>
+                                    </div>
+                                    <div class="space-y-4">
+                                        <h3 class="text-3xl font-black tracking-tight group-hover:text-primary transition-colors leading-tight">${subject.name}</h3>
+                                        <p class="text-muted text-sm leading-relaxed line-clamp-3 font-medium opacity-80">${subject.summary}</p>
+                                    </div>
+                                </div>
+                                <div class="pt-8 flex items-center justify-between border-t border-card-border/50">
+                                    <span class="text-[10px] font-black uppercase tracking-widest text-muted group-hover:text-primary transition-colors">Explore Module</span>
+                                    <i data-lucide="arrow-up-right" class="w-4 h-4 text-muted group-hover:text-primary transition-all"></i>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+                renderIcon();
+            },
+
+            'mode-selection': () => `
+                <div class="max-w-6xl mx-auto space-y-16 fade-in">
+                    <div class="flex items-center justify-between">
+                        <button onclick="setView('subjects')" class="flex items-center gap-2 text-muted hover:text-primary transition-all font-bold text-xs uppercase tracking-widest">
+                            <i data-lucide="arrow-left" class="w-4 h-4"></i> Back
+                        </button>
+                        <div class="text-right">
+                            <h2 class="text-6xl font-black tracking-tighter leading-none">${state.subject.name}</h2>
+                            <p class="text-muted text-xs uppercase tracking-[0.3em] font-bold mt-2">Select Learning Mode</p>
+                        </div>
+                    </div>
+                    <div class="grid md:grid-cols-3 gap-8">
+                        <button onclick="setView('learn-mcq', { mcqIndex: 0 })" class="card p-10 text-left group hover:border-primary transition-all flex flex-col gap-8 h-full">
+                            <div class="w-16 h-16 bg-blue-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
+                                <i data-lucide="help-circle" class="w-8 h-8"></i>
+                            </div>
+                            <div class="space-y-4">
+                                <h3 class="text-3xl font-black group-hover:text-primary transition-colors">MCQ Practice</h3>
+                                <p class="text-muted text-base leading-relaxed font-medium opacity-80">Interactive testing with instant feedback and progress tracking.</p>
+                            </div>
+                            <div class="mt-auto pt-6 flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-widest">
+                                Start Session <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                            </div>
+                        </button>
+                        <button onclick="setView('short-questions')" class="card p-10 text-left group hover:border-primary transition-all flex flex-col gap-8 h-full">
+                            <div class="w-16 h-16 bg-amber-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-amber-500/20">
+                                <i data-lucide="lightbulb" class="w-8 h-8"></i>
+                            </div>
+                            <div class="space-y-4">
+                                <h3 class="text-3xl font-black group-hover:text-primary transition-colors">Short Q&A</h3>
+                                <p class="text-muted text-base leading-relaxed font-medium opacity-80">Quick answers for core definitions and conceptual clarity.</p>
+                            </div>
+                            <div class="mt-auto pt-6 flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-widest">
+                                Start Session <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                            </div>
+                        </button>
+                        <button onclick="setView('summary')" class="card p-10 text-left group hover:border-primary transition-all flex flex-col gap-8 h-full">
+                            <div class="w-16 h-16 bg-emerald-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
+                                <i data-lucide="file-text" class="w-8 h-8"></i>
+                            </div>
+                            <div class="space-y-4">
+                                <h3 class="text-3xl font-black group-hover:text-primary transition-colors">Module Summary</h3>
+                                <p class="text-muted text-base leading-relaxed font-medium opacity-80">Concise overview of the entire course module for quick revision.</p>
+                            </div>
+                            <div class="mt-auto pt-6 flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-widest">
+                                Start Session <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                            </div>
+                        </button>
+                    </div>
+                    <div class="flex flex-col items-center gap-6 pt-12">
+                        <p class="text-muted font-bold text-xs uppercase tracking-[0.4em]">Ready for the ultimate challenge?</p>
+                        <button onclick="setView('exam', { examStarted: false })" class="btn-primary px-20 py-6 text-lg uppercase tracking-widest shadow-2xl shadow-primary/30">
+                            <i data-lucide="zap" class="w-5 h-5"></i> Start Exam Mode
+                        </button>
+                    </div>
+                </div>
+            `,
+
+            'learn-mcq': () => {
+                const q = state.subject.mcqs[state.mcqIndex];
+                if (!q) return `<div class="text-center p-20"><p class="text-muted">No MCQs available.</p><button onclick="setView('mode-selection')" class="btn-primary mt-4">Back</button></div>`;
+                
+                const progress = ((state.mcqIndex + 1) / state.subject.mcqs.length) * 100;
+
+                return `
+                    <div class="max-w-4xl mx-auto space-y-8 px-4 fade-in">
+                        <div class="flex items-center justify-between">
+                            <button onclick="setView('mode-selection')" class="flex items-center gap-2 text-muted hover:text-primary font-bold text-sm uppercase tracking-widest">
+                                <i data-lucide="arrow-left" class="w-4.5 h-4.5"></i> Back
+                            </button>
+                            <div class="text-right">
+                                <span class="text-primary font-black text-xl">${state.mcqIndex + 1}</span>
+                                <span class="text-muted font-bold text-sm"> / ${state.subject.mcqs.length}</span>
+                            </div>
+                        </div>
+
+                        <div class="card p-12 md:p-16 space-y-12 relative overflow-hidden">
+                            <div class="absolute top-0 left-0 w-full h-2 bg-bg border-b border-card-border">
+                                <div class="h-full bg-primary transition-all duration-500" style="width: ${progress}%"></div>
+                            </div>
+                            
+                            <div class="space-y-6">
+                                <p class="text-primary font-bold text-xs uppercase tracking-[0.3em]">Question Challenge</p>
+                                <h3 class="text-3xl md:text-4xl font-black leading-tight text-text">${q.question}</h3>
+                            </div>
+
+                            <div class="grid gap-4">
+                                ${q.options.map(opt => `
+                                    <button onclick="handleMCQSelection('${opt.replace(/'/g, "\\'")}')" class="mcq-option p-6 rounded-2xl border-2 border-card-border hover:border-primary hover:bg-primary/5 transition-all text-left font-bold text-lg flex items-center justify-between">
+                                        <span>${opt}</span>
+                                    </button>
+                                `).join('')}
+                            </div>
+
+                            <div class="flex items-center justify-between pt-10 border-t border-card-border/50">
+                                <button onclick="prevMCQ()" ${state.mcqIndex === 0 ? 'disabled' : ''} class="flex items-center gap-2 text-muted hover:text-primary font-bold disabled:opacity-20 transition-all">
+                                    <i data-lucide="arrow-left" class="w-4.5 h-4.5"></i> Previous
+                                </button>
+                                <button id="next-mcq-btn" onclick="nextMCQ()" class="btn-primary hidden">Next Question <i data-lucide="chevron-right" class="w-4.5 h-4.5"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            },
+
+            'short-questions': () => `
+                <div class="max-w-5xl mx-auto space-y-12 px-4 fade-in">
+                    <div class="flex items-center justify-between">
+                        <button onclick="setView('mode-selection')" class="flex items-center gap-2 text-muted hover:text-primary font-bold text-sm uppercase tracking-widest">
+                            <i data-lucide="arrow-left" class="w-4.5 h-4.5"></i> Back
+                        </button>
+                        <div class="text-right">
+                            <h2 class="text-4xl font-black tracking-tighter">SHORT <span class="text-primary">Q&A</span></h2>
+                            <p class="text-muted text-xs uppercase font-bold tracking-widest">${state.subject.shortQuestions.length} Concepts</p>
+                        </div>
+                    </div>
+                    <div class="grid gap-8">
+                        ${state.subject.shortQuestions.map((q, i) => `
+                            <div class="card p-10 md:p-12 space-y-8 group hover:border-primary transition-all">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-10 h-10 bg-primary/10 text-primary rounded-lg flex items-center justify-center font-black text-sm">${i + 1}</div>
+                                    <h3 class="text-2xl md:text-3xl font-black tracking-tight leading-tight">${q.question}</h3>
+                                </div>
+                                <div class="p-8 bg-bg rounded-2xl border border-card-border group-hover:border-primary/30 transition-all">
+                                    <p class="text-muted text-lg leading-relaxed font-medium">${q.answer}</p>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `,
+
+            'summary': () => `
+                <div class="max-w-5xl mx-auto space-y-12 px-4 fade-in">
+                    <button onclick="setView('mode-selection')" class="flex items-center gap-2 text-muted hover:text-primary font-bold text-sm uppercase tracking-widest">
+                        <i data-lucide="arrow-left" class="w-4.5 h-4.5"></i> Back
+                    </button>
+                    <div class="card p-16 md:p-24 space-y-12 relative overflow-hidden text-center">
+                        <div class="absolute -top-10 -right-10 opacity-5">
+                            <i data-lucide="file-text" style="width: 300px; height: 300px"></i>
+                        </div>
+                        <div class="space-y-4">
+                            <p class="text-primary font-bold text-xs uppercase tracking-[0.5em]">Module Overview</p>
+                            <h3 class="text-5xl md:text-7xl font-black tracking-tighter leading-none">THE CORE <span class="text-primary">ESSENCE.</span></h3>
+                        </div>
+                        <div class="max-w-3xl mx-auto">
+                            <p class="text-muted text-2xl md:text-3xl italic leading-relaxed font-medium opacity-90">"${state.subject.summary}"</p>
+                        </div>
+                    </div>
+                </div>
+            `,
+
+            'exam': () => {
+                if (!state.examStarted) return `
+                    <div class="max-w-3xl mx-auto text-center space-y-12 py-12 fade-in">
+                        <div class="w-24 h-24 bg-primary/10 text-primary rounded-[2.5rem] flex items-center justify-center mx-auto mb-8">
+                            <i data-lucide="zap" class="w-12 h-12"></i>
+                        </div>
+                        <div class="space-y-6">
+                            <h2 class="text-6xl font-black tracking-tighter">READY FOR THE <span class="text-primary">EXAM?</span></h2>
+                            <p class="text-muted text-xl max-w-xl mx-auto font-medium">
+                                This mode simulates a real exam environment. You'll have <span class="text-primary font-bold">${state.subject.mcqs.length} minutes</span> to complete <span class="text-primary font-bold">${state.subject.mcqs.length} questions</span>.
+                            </p>
+                        </div>
+                        <div class="flex flex-col items-center gap-4">
+                            <button onclick="startExam()" class="btn-primary px-20 py-6 text-xl uppercase tracking-widest shadow-xl shadow-primary/20">Start Examination</button>
+                            <button onclick="setView('mode-selection')" class="text-muted font-bold text-sm hover:text-primary transition-all">Maybe Later</button>
+                        </div>
+                    </div>
+                `;
+
+                const q = state.subject.mcqs[state.mcqIndex];
+                const formatTime = (s) => `${Math.floor(s/60)}:${(s%60).toString().padStart(2, '0')}`;
+
+                return `
+                    <div class="max-w-4xl mx-auto space-y-8 px-4 fade-in">
+                        <div class="flex items-center justify-between glass p-4 rounded-2xl border border-card-border sticky top-24 z-40">
+                            <div class="flex items-center gap-4">
+                                <div class="px-4 py-2 bg-primary/10 text-primary rounded-xl font-black text-sm">Q ${state.mcqIndex + 1} / ${state.subject.mcqs.length}</div>
+                                <div id="exam-timer" class="flex items-center gap-2 font-black text-sm ${state.examTimeLeft < 60 ? 'text-error animate-pulse' : 'text-muted'}">
+                                    <i data-lucide="clock" class="w-4.5 h-4.5"></i> ${formatTime(state.examTimeLeft)}
+                                </div>
+                            </div>
+                            <button onclick="finishExam()" class="text-error font-bold text-xs uppercase tracking-widest hover:underline">End Exam</button>
+                        </div>
+
+                        <div class="card p-12 md:p-16 space-y-12">
+                            <h3 class="text-3xl md:text-4xl font-black leading-tight">${q.question}</h3>
+                            <div class="grid gap-4">
+                                ${q.options.map(opt => `
+                                    <button onclick="selectExamAnswer('${opt.replace(/'/g, "\\'")}')" class="exam-option p-6 rounded-2xl border-2 text-left font-bold text-lg transition-all ${state.examAnswers[state.mcqIndex] === opt ? 'border-primary bg-primary/5 text-primary shadow-lg shadow-primary/10' : 'border-card-border hover:border-primary/50'}">
+                                        ${opt}
+                                    </button>
+                                `).join('')}
+                            </div>
+                            <div class="flex justify-between pt-8 border-t border-card-border/50">
+                                <button onclick="prevExamQ()" ${state.mcqIndex === 0 ? 'disabled' : ''} class="text-muted font-bold disabled:opacity-20">Previous</button>
+                                ${state.mcqIndex === state.subject.mcqs.length - 1 ? 
+                                    `<button onclick="finishExam()" class="btn-primary">Submit Exam</button>` : 
+                                    `<button onclick="nextExamQ()" class="btn-primary">Next Question <i data-lucide="chevron-right" class="w-4.5 h-4.5"></i></button>`
+                                }
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        };
+
+        // --- RENDERER ---
+        async function render() {
+            const container = document.getElementById('view-container');
+            const viewFn = views[state.view];
+            if (viewFn) {
+                const content = await viewFn();
+                if (content) container.innerHTML = content;
+                renderIcon();
+            }
+        }
+
+        // --- ACTIONS ---
+        window.handleMCQSelection = (opt) => {
+            const q = state.subject.mcqs[state.mcqIndex];
+            const options = document.querySelectorAll('.mcq-option');
+            options.forEach(btn => {
+                const text = btn.querySelector('span').innerText;
+                btn.disabled = true;
+                if (text === q.correctAnswer) {
+                    btn.classList.add('bg-success/10', 'border-success', 'text-success');
+                    btn.innerHTML += '<i data-lucide="check-circle-2" class="w-5 h-5"></i>';
+                } else if (text === opt) {
+                    btn.classList.add('bg-error/10', 'border-error', 'text-error', 'animate-shake');
+                    btn.innerHTML += '<i data-lucide="x-circle" class="w-5 h-5"></i>';
+                } else {
+                    btn.classList.add('opacity-40');
+                }
+            });
+            document.getElementById('next-mcq-btn').classList.remove('hidden');
+            renderIcon();
+        };
+
+        window.nextMCQ = () => {
+            state.mcqIndex = Math.min(state.subject.mcqs.length - 1, state.mcqIndex + 1);
+            render();
+        };
+
+        window.prevMCQ = () => {
+            state.mcqIndex = Math.max(0, state.mcqIndex - 1);
+            render();
+        };
+
+        window.startExam = () => {
+            state.examStarted = true;
+            state.mcqIndex = 0;
+            state.examAnswers = {};
+            state.examTimeLeft = state.subject.mcqs.length * 60;
+            render();
+            
+            const timer = setInterval(() => {
+                if (!state.examStarted || state.view !== 'exam') {
+                    clearInterval(timer);
+                    return;
+                }
+                state.examTimeLeft--;
+                const timerEl = document.getElementById('exam-timer');
+                if (timerEl) {
+                    const m = Math.floor(state.examTimeLeft/60);
+                    const s = state.examTimeLeft%60;
+                    timerEl.innerHTML = `<i data-lucide="clock" class="w-4.5 h-4.5"></i> ${m}:${s.toString().padStart(2, '0')}`;
+                    if (state.examTimeLeft < 60) timerEl.classList.add('text-error', 'animate-pulse');
+                }
+                if (state.examTimeLeft <= 0) {
+                    clearInterval(timer);
+                    finishExam();
+                }
+            }, 1000);
+        };
+
+        window.selectExamAnswer = (opt) => {
+            state.examAnswers[state.mcqIndex] = opt;
+            render();
+        };
+
+        window.nextExamQ = () => {
+            state.mcqIndex = Math.min(state.subject.mcqs.length - 1, state.mcqIndex + 1);
+            render();
+        };
+
+        window.prevExamQ = () => {
+            state.mcqIndex = Math.max(0, state.mcqIndex - 1);
+            render();
+        };
+
+        window.finishExam = () => {
+            const correct = state.subject.mcqs.filter((q, i) => state.examAnswers[i] === q.correctAnswer).length;
+            const percentage = Math.round((correct / state.subject.mcqs.length) * 100);
+            state.examStarted = false;
+            
+            const container = document.getElementById('view-container');
+            container.innerHTML = `
+                <div class="max-w-3xl mx-auto card p-16 text-center space-y-12 fade-in">
+                    <div class="space-y-4">
+                        <i data-lucide="trophy" class="mx-auto text-amber-500 mb-6 w-20 h-20"></i>
+                        <h2 class="text-5xl font-black tracking-tighter">EXAM <span class="text-primary">COMPLETED!</span></h2>
+                        <p class="text-muted font-bold text-lg">Great effort! Here is your performance breakdown.</p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-8">
+                        <div class="p-8 bg-bg rounded-3xl border border-card-border">
+                            <p class="text-muted text-xs uppercase font-bold tracking-widest mb-2">Score</p>
+                            <p class="text-5xl font-black text-primary">${correct} / ${state.subject.mcqs.length}</p>
+                        </div>
+                        <div class="p-8 bg-bg rounded-3xl border border-card-border">
+                            <p class="text-muted text-xs uppercase font-bold tracking-widest mb-2">Accuracy</p>
+                            <p class="text-5xl font-black text-primary">${percentage}%</p>
+                        </div>
+                    </div>
+                    <button onclick="setView('mode-selection')" class="btn-primary justify-center text-lg">Back to Curriculum</button>
+                </div>
+            `;
+            renderIcon();
+        };
+
+        // --- INITIALIZATION ---
+        document.getElementById('start-btn').addEventListener('click', () => {
+            const overlay = document.getElementById('intro-overlay');
+            overlay.style.opacity = '0';
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+                document.getElementById('app').classList.remove('hidden');
+                render();
+            }, 700);
+        });
+
+        document.getElementById('theme-toggle').addEventListener('click', () => {
+            state.isDarkMode = !state.isDarkMode;
+            document.documentElement.classList.toggle('dark', state.isDarkMode);
+            localStorage.setItem('edutake_theme', state.isDarkMode ? 'dark' : 'light');
+            document.getElementById('theme-icon').setAttribute('data-lucide', state.isDarkMode ? 'sun' : 'moon');
+            renderIcon();
+        });
+
+        document.getElementById('logo').addEventListener('click', () => setView('home'));
+
+        // Apply initial theme
+        if (state.isDarkMode) {
+            document.documentElement.classList.add('dark');
+            document.getElementById('theme-icon').setAttribute('data-lucide', 'sun');
+        }
+
+        window.lucide.createIcons();
+    </script>
+</body>
+</html>
