@@ -250,8 +250,17 @@
                             <div class="absolute top-0 left-0 w-full h-2 bg-bg border-b border-card-border"><div class="h-full bg-primary transition-all duration-500" style="width: ${progress}%"></div></div>
                             <div class="space-y-6"><p class="text-primary font-bold text-xs uppercase tracking-[0.3em]">Question Challenge</p><h3 class="text-3xl md:text-4xl font-black leading-tight text-text">${q.question}</h3></div>
                             <div class="grid gap-4">
-                                ${options.map(opt => `<button onclick="handleMCQSelection('${opt.replace(/'/g, "\\'")}', '${q.correct_answer.replace(/'/g, "\\'")}')" class="mcq-option p-6 rounded-2xl border-2 border-card-border hover:border-primary hover:bg-primary/5 transition-all text-left font-bold text-lg flex items-center justify-between"><span>${opt}</span></button>`).join('')}
+                                ${options.map(opt => `<button onclick="handleMCQSelection('${opt.replace(/'/g, "\\'")}', '${q.correct_answer.replace(/'/g, "\\'")}', '${(q.summary || "").replace(/'/g, "\\'")}')" class="mcq-option p-6 rounded-2xl border-2 border-card-border hover:border-primary hover:bg-primary/5 transition-all text-left font-bold text-lg flex items-center justify-between"><span>${opt}</span></button>`).join('')}
                             </div>
+                            
+                            <!-- Summary Container (Hidden by default) -->
+                            <div id="mcq-summary" class="hidden p-8 bg-primary/5 rounded-2xl border border-primary/20 space-y-4 fade-in">
+                                <div class="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-widest">
+                                    <i data-lucide="info" class="w-4 h-4"></i> Explanation
+                                </div>
+                                <p id="summary-text" class="text-muted text-lg leading-relaxed font-medium"></p>
+                            </div>
+
                             <div class="flex items-center justify-between pt-10 border-t border-card-border/50">
                                 <button onclick="prevMCQ()" ${state.mcqIndex === 0 ? 'disabled' : ''} class="flex items-center gap-2 text-muted hover:text-primary font-bold disabled:opacity-20 transition-all"><i data-lucide="arrow-left" class="w-4.5 h-4.5"></i> Previous</button>
                                 <button id="next-mcq-btn" onclick="nextMCQ()" class="btn-primary hidden">Next Question <i data-lucide="chevron-right" class="w-4.5 h-4.5"></i></button>
@@ -279,16 +288,32 @@
 
         async function render() { const container = document.getElementById('view-container'); const viewFn = views[state.view]; if (viewFn) { const content = await viewFn(); if (content) container.innerHTML = content; renderIcon(); } }
 
-        window.handleMCQSelection = (opt, correct) => {
+        window.handleMCQSelection = (opt, correct, summary) => {
             const options = document.querySelectorAll('.mcq-option');
             options.forEach(btn => {
                 const text = btn.innerText.trim();
                 btn.disabled = true;
-                if (text === correct) btn.classList.add('bg-success/10', 'border-success', 'text-success');
-                else if (text === opt) btn.classList.add('bg-error/10', 'border-error', 'text-error');
-                else btn.classList.add('opacity-40');
+                if (text === correct) {
+                    btn.classList.add('bg-success/10', 'border-success', 'text-success');
+                    btn.innerHTML += '<i data-lucide="check-circle-2" class="w-5 h-5"></i>';
+                } else if (text === opt) {
+                    btn.classList.add('bg-error/10', 'border-error', 'text-error');
+                    btn.innerHTML += '<i data-lucide="x-circle" class="w-5 h-5"></i>';
+                } else {
+                    btn.classList.add('opacity-40');
+                }
             });
+
+            // Show Summary
+            if (summary) {
+                const summaryBox = document.getElementById('mcq-summary');
+                const summaryText = document.getElementById('summary-text');
+                summaryText.innerText = summary;
+                summaryBox.classList.remove('hidden');
+            }
+
             document.getElementById('next-mcq-btn').classList.remove('hidden');
+            renderIcon();
         };
 
         window.nextMCQ = () => { state.mcqIndex = Math.min(state.subject.questions.length - 1, state.mcqIndex + 1); render(); };
