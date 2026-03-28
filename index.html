@@ -75,26 +75,68 @@
                 
                 let depts = [];
                 if (supabaseClient) {
-                    const { data, error } = await supabaseClient.from('question_bank').select('dept');
-                    if (!error && data) depts = [...new Set(data.map(item => item.dept))];
+                    try {
+                        const { data, error } = await supabaseClient.from('question_bank').select('dept');
+                        if (error) {
+                            console.error("Supabase Error:", error);
+                            container.innerHTML = `
+                                <div class="max-w-2xl mx-auto card p-10 text-center space-y-6 fade-in">
+                                    <i data-lucide="alert-circle" class="mx-auto text-error w-16 h-16"></i>
+                                    <h3 class="text-2xl font-black text-error">DATABASE ERROR</h3>
+                                    <p class="text-muted font-medium">${error.message}</p>
+                                    <p class="text-xs text-muted bg-bg p-4 rounded-lg">Make sure you created the 'question_bank' table and enabled RLS.</p>
+                                    <button onclick="setView('home')" class="btn-primary">Back to Home</button>
+                                </div>
+                            `;
+                            renderIcon();
+                            return;
+                        }
+                        if (data) {
+                            depts = [...new Set(data.map(item => item.dept).filter(d => d))];
+                        }
+                    } catch (e) {
+                        console.error("JS Error:", e);
+                    }
+                } else {
+                    container.innerHTML = `<div class="card p-10 text-center text-error font-bold">Supabase URL/Key missing in code (Lines 184-185).</div>`;
+                    return;
                 }
 
-                container.innerHTML = `
-                    <div class="max-w-5xl mx-auto space-y-12 fade-in">
-                        <div class="flex items-center justify-between">
-                            <button onclick="setView('home')" class="flex items-center gap-2 text-muted hover:text-primary transition-all font-bold text-xs uppercase tracking-widest"><i data-lucide="arrow-left" class="w-4 h-4"></i> Back</button>
-                            <div class="text-right"><h2 class="text-5xl font-black tracking-tighter">SELECT <span class="text-primary">DEPT.</span></h2></div>
+                if (depts.length === 0) {
+                    container.innerHTML = `
+                        <div class="max-w-2xl mx-auto card p-10 text-center space-y-6 fade-in">
+                            <i data-lucide="database" class="mx-auto text-muted opacity-20 w-16 h-16"></i>
+                            <h3 class="text-2xl font-black">NO DATA FOUND</h3>
+                            <p class="text-muted font-medium">The 'question_bank' table is empty or doesn't exist.</p>
+                            <div class="text-left bg-bg p-6 rounded-2xl space-y-2 text-sm">
+                                <p class="font-bold text-primary">Quick Fix Checklist:</p>
+                                <ul class="list-disc list-inside text-muted">
+                                    <li>Did you run the SQL command in Supabase?</li>
+                                    <li>Did you upload your CSV to 'question_bank' table?</li>
+                                    <li>Is the column name exactly 'dept' in your table?</li>
+                                </ul>
+                            </div>
+                            <button onclick="setView('select-dept')" class="btn-primary">Try Refreshing</button>
                         </div>
-                        <div class="grid md:grid-cols-2 gap-6">
-                            ${depts.map(d => `
-                                <button onclick="setView('select-semester', { dept: '${d}' })" class="card p-10 text-left group hover:border-primary transition-all flex items-center justify-between">
-                                    <h3 class="text-3xl font-black tracking-tight group-hover:text-primary transition-colors">${d}</h3>
-                                    <div class="w-12 h-12 rounded-full bg-bg flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all"><i data-lucide="chevron-right" class="w-6 h-6"></i></div>
-                                </button>
-                            `).join('')}
+                    `;
+                } else {
+                    container.innerHTML = `
+                        <div class="max-w-5xl mx-auto space-y-12 fade-in">
+                            <div class="flex items-center justify-between">
+                                <button onclick="setView('home')" class="flex items-center gap-2 text-muted hover:text-primary transition-all font-bold text-xs uppercase tracking-widest"><i data-lucide="arrow-left" class="w-4 h-4"></i> Back</button>
+                                <div class="text-right"><h2 class="text-5xl font-black tracking-tighter">SELECT <span class="text-primary">DEPT.</span></h2></div>
+                            </div>
+                            <div class="grid md:grid-cols-2 gap-6">
+                                ${depts.map(d => `
+                                    <button onclick="setView('select-semester', { dept: '${d.replace(/'/g, "\\'")}' })" class="card p-10 text-left group hover:border-primary transition-all flex items-center justify-between">
+                                        <h3 class="text-3xl font-black tracking-tight group-hover:text-primary transition-colors">${d}</h3>
+                                        <div class="w-12 h-12 rounded-full bg-bg flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all"><i data-lucide="chevron-right" class="w-6 h-6"></i></div>
+                                    </button>
+                                `).join('')}
+                            </div>
                         </div>
-                    </div>
-                `;
+                    `;
+                }
                 renderIcon();
             },
 
