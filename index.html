@@ -361,28 +361,52 @@
                 if (supabaseClient) {
                     try {
                         console.log("Fetching subjects for Dept ID:", state.dept.id, "Semester:", state.semester);
-                        const { data, error } = await supabaseClient
+                        
+                        // ১. প্রথমে শুধু সাবজেক্টগুলো ফেচ করি
+                        const { data: subjectsData, error: subjectsError } = await supabaseClient
                             .from('subjects')
-                            .select('*, mcqs(*), short_questions(*)')
+                            .select('*')
                             .eq('department_id', state.dept.id)
                             .eq('semester', parseInt(state.semester));
                         
-                        if (error) {
-                            console.error("Supabase Query Error:", error);
+                        if (subjectsError) {
+                            console.error("Supabase Subjects Error:", subjectsError);
                             const grid = document.getElementById('subject-grid');
-                            if (grid) grid.innerHTML = `<div class="col-span-full p-10 card text-center text-error font-bold">Database Error: ${error.message}</div>`;
+                            if (grid) grid.innerHTML = `<div class="col-span-full p-10 card text-center text-error font-bold">Database Error: ${subjectsError.message}</div>`;
                             return;
                         }
 
-                        console.log("Raw Supabase Data:", data);
+                        if (subjectsData && subjectsData.length > 0) {
+                            const subjectIds = subjectsData.map(s => s.id);
 
-                        if (data) {
-                            subjects = data.map(s => ({
+                            // ২. সব MCQ এবং Short Questions আলাদাভাবে ফেচ করি
+                            const [mcqsRes, sqRes] = await Promise.all([
+                                supabaseClient.from('mcqs').select('*').in('subject_id', subjectIds),
+                                supabaseClient.from('short_questions').select('*').in('subject_id', subjectIds)
+                            ]);
+
+                            const allMcqs = mcqsRes.data || [];
+                            const allSq = sqRes.data || [];
+
+                            // ৩. ডাটাগুলো সাবজেক্টের সাথে মিলিয়ে দেই
+                            subjects = subjectsData.map(s => ({
                                 ...s,
-                                mcqs: (s.mcqs || []).map(m => ({ id: m.id, question: m.question, options: m.options, correctAnswer: m.correct_answer })),
-                                shortQuestions: (s.short_questions || []).map(sq => ({ id: sq.id, question: sq.question, answer: sq.answer }))
+                                mcqs: allMcqs.filter(m => m.subject_id === s.id).map(m => ({ 
+                                    id: m.id, 
+                                    question: m.question, 
+                                    options: m.options, 
+                                    correctAnswer: m.correct_answer 
+                                })),
+                                shortQuestions: allSq.filter(sq => sq.subject_id === s.id).map(sq => ({ 
+                                    id: sq.id, 
+                                    question: sq.question, 
+                                    answer: sq.answer 
+                                }))
                             }));
                         }
+                        
+                        console.log("Processed Subjects:", subjects);
+
                     } catch (e) {
                         console.error("Critical JS Error in subjects view:", e);
                     }
