@@ -364,7 +364,7 @@
                             .from('subjects')
                             .select('*, mcqs(*), short_questions(*)')
                             .eq('department_id', state.dept.id)
-                            .eq('semester', parseInt(state.semester));
+                            .eq('semester', state.semester);
                         
                         if (!error) {
                             subjects = (data || []).map(s => ({
