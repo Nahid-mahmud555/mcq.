@@ -356,28 +356,41 @@
                     </div>
                 `;
                 renderIcon();
-
-                let subjects = [];
-                if (supabaseClient) {
-                    try {
-                        const { data, error } = await supabaseClient
-                            .from('subjects')
-                            .select('*, mcqs(*), short_questions(*)')
-                            .eq('department_id', state.dept.id)
-                            .eq('semester', state.semester);
-                        
-                        if (!error) {
-                            subjects = (data || []).map(s => ({
-                                ...s,
-                                mcqs: s.mcqs.map(m => ({ id: m.id, question: m.question, options: m.options, correctAnswer: m.correct_answer })),
-                                shortQuestions: s.short_questions.map(sq => ({ id: sq.id, question: sq.question, answer: sq.answer }))
-                            }));
-                        }
-                    } catch (e) {
-                        console.error("Error fetching subjects:", e);
-                    }
-                }
-
+let subjects = [];
+    if (supabaseClient) {
+        try {
+            // ১. শুধু সাবজেক্ট গুলো আগে নিয়ে আসি (ঝামেলা এড়াতে)
+            const { data, error } = await supabaseClient
+                .from('subjects')
+                .select('*')
+                .eq('department_id', state.dept.id)
+                .eq('semester', state.semester);
+            
+            if (!error && data) {
+                // ২. ডাটা গুলোকে সিম্পল ভাবে ম্যাপ করি
+                subjects = data.map(s => ({
+                    ...s,
+                    // যদি mcqs না থাকে তবে খালি অ্যারে দিবে, ক্রাশ করবে না
+                    mcqs: (s.mcqs || []).map(m => ({ 
+                        id: m.id, 
+                        question: m.question, 
+                        options: m.options, 
+                        correctAnswer: m.correct_answer 
+                    })),
+                    shortQuestions: (s.short_questions || []).map(sq => ({ 
+                        id: sq.id, 
+                        question: sq.question, 
+                        answer: sq.answer 
+                    }))
+                }));
+            } else if (error) {
+                console.error("Supabase SQL error:", error.message);
+            }
+        } catch (e) {
+            console.error("Critical Error fetching subjects:", e);
+        }
+    }
+                
                 const grid = document.getElementById('subject-grid');
                 if (subjects.length === 0) {
                     grid.innerHTML = `<div class="col-span-full py-20 text-center space-y-4"><i data-lucide="layers" class="mx-auto text-muted opacity-20 w-12 h-12"></i><p class="text-muted font-bold uppercase tracking-widest">No subjects found for this semester.</p></div>`;
